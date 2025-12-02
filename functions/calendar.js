@@ -9,8 +9,8 @@ const s3 = new AWS.S3({
 });
 
 function createGoogleEvent(event){
-  const appLink = `comgooglecalendar://event?action=CREATE&title=${encodeURIComponent(event.title)}&location=${encodeURIComponent(event.location)}&details=${encodeURIComponent(event.description)}&dates=${event.start}/${event.end}`;
-  const webLink = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(event.title)}&dates=${event.start}/${event.end}&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent(event.location)}`;
+  const appLink = `comgooglecalendar://event?action=CREATE&title=${encodeURIComponent(event.title)}&location=${encodeURIComponent(event.location)}&details=${encodeURIComponent(event.description)}&dates=${event.start}/${event.end}&recur=${encodeURIComponent(event.recur)}`;
+  const webLink = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(event.title)}&dates=${event.start}/${event.end}&details=${encodeURIComponent(event.description)}&location=${encodeURIComponent(event.location)}&recur=${encodeURIComponent(event.recur)}`;
 
   return {
     statusCode: 200,
@@ -52,18 +52,6 @@ function createIphoneCal(event){
   const dtstart = event.start.replace(/-|:|\s/g, "");
   const dtend   = event.end.replace(/-|:|\s/g, "");
 
-  // Build VALARM blocks for each reminder
-  const alarmBlocks = event.reminders.map(rem => {
-    const remUTC = formatICSDate(new Date(rem));
-    return [
-      "BEGIN:VALARM",
-      `TRIGGER;VALUE=DATE-TIME:${remUTC}`,
-      "ACTION:DISPLAY",
-      `DESCRIPTION:${event.title}`,
-      "END:VALARM"
-    ].join("\r\n");
-  }).join("\r\n");
-
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -74,9 +62,9 @@ function createIphoneCal(event){
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
     `SUMMARY:${event.title}`,
-    "DESCRIPTION:Basic Desc", // ${event.description.replace(/\n/g, "\\n")}
+    `DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`,
     `LOCATION:${event.location}`,
-    alarmBlocks,
+    event.recur,
     "END:VEVENT",
     "END:VCALENDAR"
   ].join("\r\n");
@@ -102,7 +90,7 @@ exports.handler = async (event) => {
     description: params.description ? decodeURIComponent(params.description) : "",
     start: params.start, // REQUIRED: ISO UTC string, e.g. 20251202T190000Z
     end: params.end,   // REQUIRED: ISO UTC string, e.g. 20251202T200000Z
-    reminders: params.reminders ? params.reminders.split(",") : []
+    recur: "RRULE:FREQ=DAILY;COUNT=3"
   }
 
   if (!eventData.start || !eventData.end) {
