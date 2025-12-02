@@ -29,7 +29,7 @@ function createGoogleEvent(event){
 
 function createIphoneEvent(event){
   const icsContent = createIphoneCal(event);
-    const fileName = `SirLeoReminder_${event.title}_${event.start}.ics`;
+    const fileName = `${event.title.replace(/-|:|\s/g, "")}_${event.start}.ics`;
     s3.putObject({
       Bucket: process.env.DEFAULT_S3_BUCKET,
       Key: fileName,
