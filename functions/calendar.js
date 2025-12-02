@@ -85,11 +85,11 @@ exports.handler = async (event) => {
 
   // --- Event data ---
   const eventData = {
+    start: params.start, // REQUIRED: ISO UTC string, e.g. 20251202T190000Z
+    end: params.end,   // REQUIRED: ISO UTC string, e.g. 20251202T200000Z
     title: params.title ? decodeURIComponent(params.title) : "",
     location: params.location ? decodeURIComponent(params.location) : "",
     description: params.description ? decodeURIComponent(params.description) : "",
-    start: params.start, // REQUIRED: ISO UTC string, e.g. 20251202T190000Z
-    end: params.end,   // REQUIRED: ISO UTC string, e.g. 20251202T200000Z
     recur: "RRULE:FREQ=DAILY;COUNT=3"
   }
 
