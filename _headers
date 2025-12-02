@@ -1,0 +1,7 @@
+/SirLeoContact.vcf
+  Content-Type: text/vcard; charset=utf-8
+  Content-Disposition: attachment; filename="contact.vcf"
+
+/event.ics
+  Content-Type: text/calendar; charset=utf-8
+  Content-Disposition: attachment; filename="event.ics"
