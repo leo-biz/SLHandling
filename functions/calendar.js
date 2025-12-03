@@ -27,25 +27,73 @@ function createGoogleEvent(event){
   };
 }
 
-function createIphoneEvent(event){
+async function createIphoneEvent(event) {
+  // Build ICS
   const icsContent = createIphoneCal(event);
-    const fileName = `${event.title.replace(/-|:|\s/g, "")}_${event.start}.ics`;
-    s3.putObject({
-      Bucket: process.env.DEFAULT_S3_BUCKET,
-      Key: fileName,
-      Body: icsContent,
-      ContentType: 'text/calendar',
+
+  // sanitize filename (remove spaces, colon, etc.)
+  const fileNameRaw = `${event.title.replace(/[-:\s]/g, "")}_${event.start}.ics`;
+  console.log("S3 File Name (raw):", fileNameRaw);
+
+  // S3 key should be exact; url must be encoded for safe link
+  const s3Key = fileNameRaw;
+  const s3UrlEncoded = encodeURIComponent(s3Key);
+
+  // Debug env
+  console.log("S3 bucket:", process.env.DEFAULT_S3_BUCKET);
+  console.log("S3 region:", process.env.DEFAULT_AWS_REGION);
+
+  const putParams = {
+    Bucket: process.env.DEFAULT_S3_BUCKET,
+    Key: s3Key,
+    Body: icsContent,
+    ContentType: 'text/calendar',
+    ContentDisposition: `inline; filename="${s3Key}"`
+  };
+
+  try {
+    console.log("Calling s3.putObject with params (safe):", {
+      Bucket: putParams.Bucket,
+      Key: putParams.Key,
+      ContentType: putParams.ContentType,
+      ContentDisposition: putParams.ContentDisposition,
+      BodyPreview: putParams.Body.slice(0, 200) + (putParams.Body.length > 200 ? '...[truncated]' : '')
     });
 
-    const s3Url = `https://${process.env.DEFAULT_S3_BUCKET}.s3.${process.env.DEFAULT_AWS_REGION}.amazonaws.com/${fileName}`;
+    // IMPORTANT: await the promise so the function doesn't exit early
+    const putResult = await s3.putObject(putParams).promise();
+    console.log("s3.putObject result:", putResult);
 
-    // Redirect to S3 file so iPhone opens Calendar
+    // verify it exists
+    try {
+      const head = await s3.headObject({ Bucket: putParams.Bucket, Key: putParams.Key }).promise();
+      console.log("headObject OK:", head);
+    } catch (headErr) {
+      console.error("headObject failed:", headErr && headErr.code, headErr && headErr.message);
+      // continue — we'll still return the URL, but log the issue
+    }
+
+    // Build a publicly usable URL (encode key portion)
+    const s3Url = `https://${putParams.Bucket}.s3.${process.env.DEFAULT_AWS_REGION}.amazonaws.com/${s3UrlEncoded}`;
+    console.log("Returning S3 URL:", s3Url);
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: s3Url })
     };
+
+  } catch (err) {
+    console.error("S3 upload error:", err && err.code, err && err.message);
+    if (err && err.stack) console.error(err.stack);
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err && err.message, code: err && err.code })
+    };
+  }
 }
+
 
 function createIphoneCal(event){
   const dtstamp = formatICSDate(new Date());
