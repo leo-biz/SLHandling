@@ -33,15 +33,15 @@ async function createIphoneEvent(event) {
 
   // sanitize filename (remove spaces, colon, etc.)
   const fileNameRaw = `${event.title.replace(/[-:\s]/g, "")}_${event.start}.ics`;
-  console.log("S3 File Name (raw):", fileNameRaw);
+  console.info("S3 File Name (raw):", fileNameRaw);
 
   // S3 key should be exact; url must be encoded for safe link
   const s3Key = fileNameRaw;
   const s3UrlEncoded = encodeURIComponent(s3Key);
 
   // Debug env
-  console.log("S3 bucket:", process.env.DEFAULT_S3_BUCKET);
-  console.log("S3 region:", process.env.DEFAULT_AWS_REGION);
+  console.info("S3 bucket:", process.env.DEFAULT_S3_BUCKET);
+  console.info("S3 region:", process.env.DEFAULT_AWS_REGION);
 
   const putParams = {
     Bucket: process.env.DEFAULT_S3_BUCKET,
@@ -52,7 +52,7 @@ async function createIphoneEvent(event) {
   };
 
   try {
-    console.log("Calling s3.putObject with params (safe):", {
+    console.info("Calling s3.putObject with params (safe):", {
       Bucket: putParams.Bucket,
       Key: putParams.Key,
       ContentType: putParams.ContentType,
@@ -62,20 +62,20 @@ async function createIphoneEvent(event) {
 
     // IMPORTANT: await the promise so the function doesn't exit early
     const putResult = await s3.putObject(putParams).promise();
-    console.log("s3.putObject result:", putResult);
+    console.info("s3.putObject result:", putResult);
 
     // verify it exists
     try {
       const head = await s3.headObject({ Bucket: putParams.Bucket, Key: putParams.Key }).promise();
-      console.log("headObject OK:", head);
+      console.info("headObject OK:", head);
     } catch (headErr) {
       console.error("headObject failed:", headErr && headErr.code, headErr && headErr.message);
-      // continue — we'll still return the URL, but log the issue
+      // continue — we'll still return the URL, but info the issue
     }
 
     // Build a publicly usable URL (encode key portion)
     const s3Url = `https://${putParams.Bucket}.s3.${process.env.DEFAULT_AWS_REGION}.amazonaws.com/${s3UrlEncoded}`;
-    console.log("Returning S3 URL:", s3Url);
+    console.info("Returning S3 URL:", s3Url);
 
     return {
       statusCode: 200,
@@ -93,7 +93,6 @@ async function createIphoneEvent(event) {
     };
   }
 }
-
 
 function createIphoneCal(event){
   const dtstamp = formatICSDate(new Date());
